@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Channels — CDN Live TV</title>
+  <meta name="description" content="Browse all free live TV channels — sports, news, entertainment. No auth required.">
+  <meta name="theme-color" content="#09090b">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>�</text></svg>">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="channels" class="has-mobile-nav">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo" aria-label="CDN Live TV Home">
+        
+        <span class="logo-text">CDN Live TV</span>
+        <span class="logo-sub">Free Sports Streams</span>
+      </a>
+      <nav class="page-nav" aria-label="Main navigation">
+        <a href="index.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Home
+        </a>
+        <a href="cricket.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8l-4 4h3v4h2v-4h3z"/></svg>
+          Cricket
+        </a>
+        <a href="live.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49m11.31-2.82a10 10 0 010 14.14m-14.14 0a10 10 0 010-14.14"/></svg>
+          Live
+        </a>
+        <a href="channels.html" class="active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Channels
+        </a>
+      </nav>
+      <div class="header-actions">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="search-input" placeholder="Search all channels…" aria-label="Search channels">
+        </div>
+      </div>
+    </div>
+    <!-- Mobile search bar (below header, centered) -->
+    <div class="container mobile-search-row">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="mobile-search-input-header" placeholder="Search all channels…" aria-label="Search channels" oninput="document.getElementById('search-input').value=this.value;document.getElementById('search-input').dispatchEvent(new Event('input'))">
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Search Overlay -->
+  <div class="mobile-search-overlay" id="mobile-search-overlay">
+    <div class="search-input-wrap" style="position:relative">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="mobile-search-input" placeholder="Search all channels…" aria-label="Search channels">
+      <button class="close-btn" onclick="MobileSearch.close()">Cancel</button>
+    </div>
+    <div class="search-hint">Type to search channels, countries, networks…</div>
+  </div>
+
+  <main class="container" style="padding-top:24px;padding-bottom:24px;">
+
+    <!-- Stats -->
+    <div class="stats-row" role="status" aria-label="Channel statistics">
+      <div class="stat-card">
+        <div class="stat-value accent" id="stat-channels">0</div>
+        <div class="stat-label">Total Channels</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-live">0</div>
+        <div class="stat-label">Online</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-sports">0</div>
+        <div class="stat-label">Categories</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-viewers">0</div>
+        <div class="stat-label">Viewers</div>
+      </div>
+    </div>
+
+    <!-- Channels Section -->
+    <section class="section" aria-label="All channels">
+      <div class="section-header">
+        <div class="section-title">
+          Channels
+          <span class="count" id="channels-count">0</span>
+        </div>
+        <div class="section-actions">
+          <button class="btn" id="fav-filter-btn" onclick="UI.toggleFavoritesFilter()">★ Favorites</button>
+          <button class="btn active" data-sort="name" onclick="UI.sortChannels('name')">Name</button>
+          <button class="btn" data-sort="viewers" onclick="UI.sortChannels('viewers')">Viewers</button>
+          <button class="btn" data-sort="status" onclick="UI.sortChannels('status')">Status</button>
+        </div>
+      </div>
+      <!-- Source Tabs -->
+      <div class="source-tabs-wrap">
+        <div class="source-tabs" id="source-tabs">
+          <button class="source-tab active" data-source="cdn" onclick="UI.switchSource('cdn')">CDN Live TV</button>
+          <button class="source-tab" data-source="iptv" onclick="UI.switchSource('iptv')">iptv-org <span id="iptv-status" style="opacity:0.5;font-size:0.6rem"></span></button>
+        </div>
+        <select id="country-filter" class="country-filter" onchange="UI.filterByCountry(this.value)">
+          <option value="all">All Countries</option>
+        </select>
+      </div>
+      <div class="channel-cats-wrap">
+        <div class="cat-nav-controls">
+          <button class="cat-nav-btn" id="cat-prev-btn" onclick="UI.navigateCategories(-1)" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 18 15 18"/></svg>
+          </button>
+          <button class="cat-nav-btn" id="cat-next-btn" onclick="UI.navigateCategories(1)" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 18 9 18"/></svg>
+          </button>
+        </div>
+        <div class="channel-cats" id="channel-categories"></div>
+      </div>
+      <div class="channels-grid" id="channels-container">
+        <div class="skeleton-grid">
+          <div class="skeleton-card"><div class="skeleton-card-head"><div class="skeleton-card-avatar"></div><div class="skeleton-card-line w80"></div></div><div class="skeleton-card-line w60"></div><div class="skeleton-card-line w40"></div></div>
+          <div class="skeleton-card"><div class="skeleton-card-head"><div class="skeleton-card-avatar"></div><div class="skeleton-card-line w80"></div></div><div class="skeleton-card-line w60"></div><div class="skeleton-card-line w40"></div></div>
+          <div class="skeleton-card"><div class="skeleton-card-head"><div class="skeleton-card-avatar"></div><div class="skeleton-card-line w80"></div></div><div class="skeleton-card-line w60"></div><div class="skeleton-card-line w40"></div></div>
+          <div class="skeleton-card"><div class="skeleton-card-head"><div class="skeleton-card-avatar"></div><div class="skeleton-card-line w80"></div></div><div class="skeleton-card-line w60"></div><div class="skeleton-card-line w40"></div></div>
+          <div class="skeleton-card"><div class="skeleton-card-head"><div class="skeleton-card-avatar"></div><div class="skeleton-card-line w80"></div></div><div class="skeleton-card-line w60"></div><div class="skeleton-card-line w40"></div></div>
+          <div class="skeleton-card"><div class="skeleton-card-head"><div class="skeleton-card-avatar"></div><div class="skeleton-card-line w80"></div></div><div class="skeleton-card-line w60"></div><div class="skeleton-card-line w40"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="shortcuts-hint">
+      <span class="kbd">/</span> Search &nbsp;
+      <span class="kbd">R</span> Refresh
+    </div>
+  </main>
+
+  <footer class="footer">
+    Powered by <a href="https://cdnlivetv.tv" target="_blank" rel="noopener">CDN Live TV</a> · Free API · Auto-refreshes every 60s
+  </footer>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <a href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </a>
+    <a href="cricket.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+      Cricket
+    </a>
+    <a href="live.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49"/></svg>
+      Live
+    </a>
+    <a href="channels.html" class="active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      Channels
+    </a>
+  </nav>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/utils.js"></script>
+</body>
+</html>

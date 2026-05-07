@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Now Playing — CDN Live TV</title>
+  <meta name="theme-color" content="#09090b">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'></text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Plyr CSS -->
+  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+  <link rel="stylesheet" href="css/player.css">
+</head>
+<body>
+  <div class="player-page">
+    <!-- Top Bar -->
+    <div class="player-bar" id="player-bar">
+      <div class="bar-left">
+        <a href="index.html" title="Back to channels">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </a>
+        <span class="live-dot"></span>
+        <span class="ch-name" id="ch-name">Loading…</span>
+        <span class="ch-code" id="ch-code"></span>
+        <span class="source-badge cdn" id="source-badge" style="display:none"></span>
+      </div>
+      <div class="bar-right">
+        <button class="bar-btn" onclick="toggleBar()" title="Hide bar (H)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+          Hide <span class="kbd">H</span>
+        </button>
+        <button class="bar-btn" onclick="goFullscreen()" title="Fullscreen (F)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+          Fullscreen <span class="kbd">F</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Player Frame -->
+    <div class="player-frame">
+      <div class="loader" id="loader">
+        <div class="spinner"></div>
+        <div class="loader-text">Loading stream…</div>
+      </div>
+      <div class="error-state" id="error-state">
+        <div class="icon"></div>
+        <h2>Stream unavailable</h2>
+        <p>This channel may be offline or the link is invalid.</p>
+        <a href="index.html">← Back to channels</a>
+      </div>
+      <iframe id="stream-iframe" allow="encrypted-media; autoplay" allowfullscreen style="display:none"></iframe>
+      <div id="video-wrap" style="display:none">
+        <video id="stream-video" autoplay playsinline></video>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+  <script>
+    const PLAYER_BASE = "https://cdnlivetv.tv/api/v1/channels/player/";
+
+    const params = new URLSearchParams(window.location.search);
+    const channelName = params.get("name") || "";
+    const channelCode = params.get("code") || "";
+    const streamURL = params.get("url") || "";
+    const streamSource = params.get("source") || "cdn";
+    const streamQuality = params.get("quality") || "";
+    const streamReferrer = params.get("referrer") || "";
+
+    const iframe = document.getElementById("stream-iframe");
+    const videoWrap = document.getElementById("video-wrap");
+    const video = document.getElementById("stream-video");
+    const sourceBadge = document.getElementById("source-badge");
+    let player = null;
+    let hls = null;
+
+    function hideLoader() {
+      document.getElementById("loader").classList.add("done");
+    }
+
+    function showError() {
+      hideLoader();
+      document.getElementById("error-state").classList.add("show");
+    }
+
+    const isCdnEmbed = !!streamURL && (
+      streamSource === "cdn" ||
+      streamURL.includes("/channels/player/")
+    );
+
+    if (streamURL && !isCdnEmbed) {
+      // ─── Direct M3U8/HLS stream (iptv-org or other) ───
+      document.getElementById("ch-name").textContent = channelName || "Live Stream";
+      document.getElementById("ch-code").textContent = channelCode ? channelCode.toUpperCase() : "";
+      document.title = `${channelName || "Live Stream"} — CDN Live TV`;
+
+      sourceBadge.textContent = streamSource === "freetv" ? "FREE-TV" : (streamSource === "iptv" ? "IPTV" : "HLS");
+      const badgeClass = streamSource === "freetv" ? "freetv" : (streamSource === "iptv" ? "iptv" : "cdn");
+      sourceBadge.className = `source-badge ${badgeClass}`;
+      sourceBadge.style.display = "";
+      if (streamQuality) sourceBadge.textContent += ` · ${streamQuality}`;
+
+      videoWrap.style.display = "block";
+
+      // Initialize Plyr with bigger controls and autoplay
+      player = new Plyr(video, {
+        controls: [
+          "play-large", "play", "progress", "current-time", "duration",
+          "mute", "volume", "settings", "pip", "airplay", "fullscreen"
+        ],
+        settings: ["quality", "speed"],
+        quality: { default: 720, options: [1080, 720, 480, 360] },
+        speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
+        autoplay: true,
+        muted: false,
+        volume: 1,
+        ratio: "16:9",
+        loadSprite: true,
+        invertTime: true,
+        toggleInvert: true,
+        i18n: {
+          qualityLabel: { 1080: "1080p", 720: "720p", 480: "480p", 360: "360p" },
+          quality: "Quality",
+          speed: "Speed",
+          autoplay: "Autoplay",
+          play: "Play",
+          pause: "Pause"
+        }
+      });
+
+      // Force autoplay: try muted first, then unmute on user interaction
+      const tryAutoplay = async () => {
+        try {
+          await video.play();
+        } catch (e) {
+          // Autoplay blocked — try muted
+          video.muted = true;
+          try {
+            await video.play();
+            // Show unmute hint
+            const hint = document.createElement("div");
+            hint.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;background:rgba(0,0,0,0.8);color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;cursor:pointer;font-family:Inter,sans-serif;";
+            hint.textContent = "Click to unmute";
+            hint.onclick = () => { video.muted = false; hint.remove(); };
+            document.querySelector(".player-frame").appendChild(hint);
+          } catch (e2) {
+            // Even muted autoplay failed
+          }
+        }
+      };
+
+      if (Hls.isSupported() && (streamURL.includes(".m3u8") || streamURL.includes("m3u8"))) {
+        hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 30,
+          xhrSetup: function(xhr, url) {
+            if (streamReferrer) {
+              try { xhr.setRequestHeader("Referer", streamReferrer); } catch(e) {}
+            }
+          }
+        });
+        hls.loadSource(streamURL);
+        hls.attachMedia(video);
+
+        // Quality levels from HLS manifest
+        hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+          const levels = hls.levels.map((l, i) => ({
+            index: i,
+            height: l.height,
+            bitrate: l.bitrate,
+            label: l.height ? `${l.height}p` : `${Math.round(l.bitrate/1000)}kbps`
+          }));
+          if (levels.length > 0) {
+            player.quality = levels[levels.length - 1].height || 720;
+          }
+          hideLoader();
+          tryAutoplay();
+        });
+
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            const is403 = data.response && data.response.code === 403;
+            if (is403) {
+              hideLoader();
+              const errEl = document.getElementById("error-state");
+              errEl.querySelector("h2").textContent = "Geo-blocked stream";
+              errEl.querySelector("p").textContent = "This stream is restricted to certain regions and cannot be played through the proxy.";
+              errEl.classList.add("show");
+            } else {
+              switch (data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR:
+                  hls.startLoad();
+                  break;
+                case Hls.ErrorTypes.MEDIA_ERROR:
+                  hls.recoverMediaError();
+                  break;
+                default:
+                  showError();
+                  break;
+              }
+            }
+          }
+        });
+
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        // Safari native HLS
+        video.src = streamURL;
+        video.addEventListener("loadedmetadata", () => { hideLoader(); tryAutoplay(); });
+        video.addEventListener("error", () => showError());
+      } else {
+        // Direct playback (mp4, etc.)
+        video.src = streamURL;
+        video.addEventListener("canplay", () => { hideLoader(); tryAutoplay(); });
+        video.addEventListener("error", () => showError());
+      }
+
+      setTimeout(hideLoader, 10000);
+
+    } else if (isCdnEmbed || (channelName && channelCode)) {
+      // ─── CDN Live TV iframe embed ───
+      document.getElementById("ch-name").textContent = channelName;
+      document.getElementById("ch-code").textContent = channelCode.toUpperCase();
+      document.title = `${channelName} — CDN Live TV`;
+
+      sourceBadge.textContent = "CDN";
+      sourceBadge.className = "source-badge cdn";
+      sourceBadge.style.display = "";
+
+      const encodedName = encodeURIComponent(channelName.toLowerCase().replace(/\s+/g, "+"));
+      const playerURL = streamURL || `${PLAYER_BASE}?name=${encodedName}&code=${channelCode}&user=cdnlivetv&plan=free`;
+
+      iframe.style.display = "block";
+      iframe.src = playerURL;
+
+      iframe.addEventListener("load", hideLoader);
+      setTimeout(hideLoader, 8000);
+
+    } else {
+      showError();
+      document.getElementById("ch-name").textContent = "No channel specified";
+    }
+
+    // ── Controls ──
+    let barHidden = false;
+    function toggleBar() {
+      barHidden = !barHidden;
+      document.getElementById("player-bar").classList.toggle("hidden", barHidden);
+    }
+
+    function goFullscreen() {
+      const el = document.documentElement;
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "f" || e.key === "F") goFullscreen();
+      if (e.key === "h" || e.key === "H") toggleBar();
+      if (e.key === "Escape" && document.fullscreenElement) document.exitFullscreen();
+      if (e.key === "Backspace" || (e.altKey && e.key === "ArrowLeft")) {
+        window.location.href = "index.html";
+      }
+      // Space to play/pause
+      if (e.key === " " && player) {
+        e.preventDefault();
+        player.togglePlay();
+      }
+      // M to mute
+      if (e.key === "m" && player) {
+        player.muted = !player.muted;
+      }
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (barHidden && e.clientY < 50) {
+        barHidden = false;
+        document.getElementById("player-bar").classList.remove("hidden");
+      }
+    });
+
+    // Cleanup on page unload
+    window.addEventListener("beforeunload", () => {
+      if (hls) { hls.destroy(); hls = null; }
+      if (player) { player.destroy(); player = null; }
+    });
+  </script>
+</body>
+</html>
