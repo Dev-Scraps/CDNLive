@@ -13,6 +13,7 @@ const App = {
   _nextRefresh: 0,
   _iptvLoaded: false,
   _freetvLoaded: false,
+  _samsungLoaded: false,
 
   async init() {
     Toast.init();
@@ -68,6 +69,17 @@ const App = {
     if (freetvCached && freetvCached.freetvChannels) {
       UI.setFreetvData(freetvCached.freetvChannels);
       this._freetvLoaded = true;
+    }
+
+    // 2c) Load Samsung TV Plus from cache instantly
+    const samsungCached = API._loadCache(`${API.SAMSUNG_CACHE_KEY}_all`);
+    if (samsungCached && samsungCached.samsungChannels) {
+      UI.setSamsungData(samsungCached.samsungChannels);
+      this._samsungLoaded = true;
+    } else {
+      // No cache: set loading state and load immediately
+      UI.setSamsungLoading(true);
+      this._loadSamsung();
     }
 
     // 3) Refresh CDN Live TV in background (always)
@@ -130,6 +142,18 @@ const App = {
     } catch (err) {
       console.error("[App] Failed to load Free-TV:", err);
       UI.setFreetvLoading(false);
+    }
+  },
+
+  async _loadSamsung() {
+    try {
+      UI.setSamsungLoading(true);
+      const samsungChannels = await API.loadSamsungWithCache('all');
+      UI.setSamsungData(samsungChannels);
+      this._samsungLoaded = true;
+    } catch (err) {
+      console.error("[App] Failed to load Samsung TV Plus:", err);
+      UI.setSamsungLoading(false);
     }
   },
 

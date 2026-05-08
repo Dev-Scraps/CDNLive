@@ -15,9 +15,13 @@ const API = {
   IPTV_BASE: "https://iptv-org.github.io/api",
   FREETV_URL: "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8",
 
+  SAMSUNG_CHANNELS_URL: "./channels.json",
+  SAMSUNG_PLAYBACK: "https://jmp2.uk/stvp-{id}",
+
   CACHE_KEY: "cdnlive_cache_v3",
   IPTV_CACHE_KEY: "iptvorg_cache_v2",
   FREETV_CACHE_KEY: "freetv_cache_v2",
+  SAMSUNG_CACHE_KEY: "samsung_cache_v1",
   CACHE_TTL: 5 * 60 * 1000, // 5 minutes
 
   // ─── URL Builders ───
@@ -201,6 +205,55 @@ const API = {
       }
     }
     return channels;
+  },
+
+  // ─── Samsung TV Plus ───
+  async loadSamsungWithCache(region) {
+    const cacheKey = `${this.SAMSUNG_CACHE_KEY}_${region || 'all'}`;
+    const cached = this._loadCache(cacheKey);
+    if (cached && cached.samsungChannels && cached.samsungChannels.length > 0) return cached.samsungChannels;
+
+    try {
+      const res = await fetch(this.SAMSUNG_CHANNELS_URL);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      const slugTemplate = data.slug || "stvp-{id}";
+      const regions = data.regions || {};
+      const channels = [];
+
+      const regionKeys = region && region !== 'all'
+        ? [region.toLowerCase()]
+        : Object.keys(regions);
+
+      for (const rKey of regionKeys) {
+        const rData = regions[rKey];
+        if (!rData || !rData.channels) continue;
+        for (const [chId, ch] of Object.entries(rData.channels)) {
+          // Skip DRM channels
+          if (ch.license_url) continue;
+          const url = this.SAMSUNG_PLAYBACK.replace('{id}', chId);
+          channels.push({
+            name: ch.name || 'Unknown',
+            url: url,
+            logo: ch.logo || '',
+            country: rKey.toUpperCase(),
+            countryName: (rData.name || rKey),
+            categories: ch.group ? [ch.group] : [],
+            network: 'Samsung TV Plus',
+            quality: '',
+            label: '',
+            _source: 'samsung',
+          });
+        }
+      }
+
+      this._saveCache(cacheKey, { samsungChannels: channels });
+      return channels;
+    } catch (err) {
+      console.error('[API] loadSamsung failed:', err);
+      return [];
+    }
   },
 
   // ─── Cache Helpers ───

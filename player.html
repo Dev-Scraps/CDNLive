@@ -79,6 +79,9 @@
       streamURL.includes("/channels/player/")
     );
 
+    // Samsung jmp2.uk URLs are redirectors that resolve to stream players
+    const isSamsungEmbed = streamSource === "samsung" && (streamURL.includes("jmp2.uk") || streamURL.includes("stvp-"));
+
     // Detect YouTube / web-embed URLs that need iframe, not <video>
     const ytMatch = streamURL && streamURL.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     const twitchMatch = streamURL && streamURL.match(/twitch\.tv\/(\w+)/);
@@ -272,6 +275,27 @@
 
       iframe.style.display = "block";
       iframe.src = playerURL;
+
+      iframe.addEventListener("load", hideLoader);
+      setTimeout(hideLoader, 8000);
+
+    } else if (isSamsungEmbed) {
+      // ─── Samsung TV Plus iframe embed (jmp2.uk redirector) ───
+      const chNameEl = document.getElementById("ch-name");
+      const chCodeEl = document.getElementById("ch-code");
+      if (chNameEl) chNameEl.textContent = channelName || "Samsung TV+";
+      if (chCodeEl) chCodeEl.textContent = channelCode ? channelCode.toUpperCase() : "";
+      document.title = `${channelName || "Samsung TV+"} — CDN Live TV`;
+
+      if (sourceBadge) {
+        sourceBadge.textContent = "SAMSUNG TV+";
+        sourceBadge.className = "source-badge samsung";
+        sourceBadge.style.display = "";
+      }
+
+      iframe.style.display = "block";
+      iframe.src = streamURL;
+      iframe.allow = "encrypted-media; autoplay; fullscreen";
 
       iframe.addEventListener("load", hideLoader);
       setTimeout(hideLoader, 8000);

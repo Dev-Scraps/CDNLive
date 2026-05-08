@@ -9,16 +9,18 @@ const UI = {
   _allChannels: [],
   _iptvChannels: [],
   _freetvChannels: [],
+  _samsungChannels: [],
   _activeSport: "all",
   _channelCategory: "all",
   _sort: "name",
   _favorites: new Set(),
   _showFavoritesOnly: false,
   _searchQuery: "",
-  _activeSource: "cdn", // "cdn", "iptv", or "freetv"
+  _activeSource: "cdn", // "cdn", "iptv", "freetv", or "samsung"
   _countryFilter: "all", // separate from category
   _iptvLoading: false,
   _freetvLoading: false,
+  _samsungLoading: true, // Start with loading state
   _iptvRenderLimit: 200, // Render max 200 iptv channels at a time
   _useStreamProxy: false,
 
@@ -166,6 +168,10 @@ const UI = {
     const freetvLabel = this._freetvLoading
       ? `Free-TV <span class="cat-count" style="color:var(--amber)">loading…</span>`
       : `Free-TV <span class="cat-count">${freetvCount}</span>`;
+    const samsungCount = this._samsungChannels.length;
+    const samsungLabel = this._samsungLoading
+      ? `Samsung TV+ <span class="cat-count" style="color:var(--amber)">loading…</span>`
+      : `Samsung TV+ <span class="cat-count">${samsungCount}</span>`;
     container.innerHTML = `
       <button class="source-tab ${this._activeSource === 'cdn' ? 'active' : ''}" data-source="cdn" onclick="UI.switchSource('cdn')">
         CDN Live TV <span class="cat-count">${cdnCount}</span>
@@ -175,6 +181,9 @@ const UI = {
       </button>
       <button class="source-tab ${this._activeSource === 'freetv' ? 'active' : ''}" data-source="freetv" onclick="UI.switchSource('freetv')">
         ${freetvLabel}
+      </button>
+      <button class="source-tab ${this._activeSource === 'samsung' ? 'active' : ''}" data-source="samsung" onclick="UI.switchSource('samsung')">
+        ${samsungLabel}
       </button>`;
   },
 
@@ -195,6 +204,23 @@ const UI = {
     this._renderSourceTabs();
   },
 
+  // ─── Set Samsung TV Plus Data ───
+  setSamsungData(channels) {
+    this._samsungChannels = channels;
+    this._samsungLoading = false;
+    this._renderSourceTabs();
+    if (this._activeSource === "samsung") {
+      this._renderChannelCategories();
+      this._updateCountryFilter();
+      this._renderChannels();
+    }
+  },
+
+  setSamsungLoading(loading) {
+    this._samsungLoading = loading;
+    this._renderSourceTabs();
+  },
+
   switchSource(source) {
     if (source === "iptv" && this._iptvLoading) {
       Toast.show("iptv-org channels still loading…");
@@ -202,6 +228,10 @@ const UI = {
     }
     if (source === "freetv" && this._freetvLoading) {
       Toast.show("Free-TV channels still loading…");
+      return;
+    }
+    if (source === "samsung" && this._samsungLoading) {
+      Toast.show("Samsung TV+ channels still loading…");
       return;
     }
     this._activeSource = source;
@@ -228,13 +258,20 @@ const UI = {
 
     const isIptv = this._activeSource === "iptv";
     const isFreetv = this._activeSource === "freetv";
-    const channels = isFreetv ? this._freetvChannels : (isIptv ? this._iptvChannels : this._allChannels);
+    const isSamsung = this._activeSource === "samsung";
+    const channels = isSamsung ? this._samsungChannels : (isFreetv ? this._freetvChannels : (isIptv ? this._iptvChannels : this._allChannels));
 
     // Count channels per country
     const countryCounts = new Map();
     channels.forEach((ch) => {
-      const code = isFreetv ? (ch.country || "") : (isIptv ? (ch.country || "") : ((ch.code || "").toUpperCase()));
-      const name = isFreetv ? (ch.countryName || ch.country || "") : (isIptv ? (ch.countryName || ch.country || "") : code);
+      let code, name;
+      if (isFreetv || isIptv || isSamsung) {
+        code = ch.country || "";
+        name = ch.countryName || ch.country || "";
+      } else {
+        code = (ch.code || "").toUpperCase();
+        name = code;
+      }
       if (!code) return;
       const key = code.toUpperCase();
       if (!countryCounts.has(key)) countryCounts.set(key, { code: key, name: name, count: 0 });
@@ -557,9 +594,10 @@ const UI = {
   _renderChannelCategories() {
     const isIptv = this._activeSource === "iptv";
     const isFreetv = this._activeSource === "freetv";
-    const channels = isFreetv ? this._freetvChannels : (isIptv ? this._iptvChannels : this._allChannels);
+    const isSamsung = this._activeSource === "samsung";
+    const channels = isSamsung ? this._samsungChannels : (isFreetv ? this._freetvChannels : (isIptv ? this._iptvChannels : this._allChannels));
 
-    if (isIptv || isFreetv) {
+    if (isIptv || isFreetv || isSamsung) {
       this._renderIptvCategories(channels);
       return;
     }
@@ -724,8 +762,9 @@ const UI = {
   _renderChannels() {
     const isIptv = this._activeSource === "iptv";
     const isFreetv = this._activeSource === "freetv";
-    const isStreamSource = isIptv || isFreetv;
-    let list = isFreetv ? [...this._freetvChannels] : (isIptv ? [...this._iptvChannels] : [...this._allChannels]);
+    const isSamsung = this._activeSource === "samsung";
+    const isStreamSource = isIptv || isFreetv || isSamsung;
+    let list = isSamsung ? [...this._samsungChannels] : (isFreetv ? [...this._freetvChannels] : (isIptv ? [...this._iptvChannels] : [...this._allChannels]));
 
     // Country filter (independent of category)
     if (this._countryFilter !== "all") {
@@ -866,7 +905,7 @@ const UI = {
     const qualityBadge = ch.quality ? `<span class="ch-card-cat" style="color:var(--green)">${ch.quality}</span>` : "";
     const labelBadge = ch.label ? `<span class="ch-card-cat">${ch.label}</span>` : "";
     const catBadges = (ch.categories || []).slice(0, 2).map((c) => `<span class="ch-card-cat">${c}</span>`).join("");
-    const sourceTag = ch._source === "freetv" ? "freetv" : "iptv";
+    const sourceTag = ch._source === "freetv" ? "freetv" : (ch._source === "samsung" ? "samsung" : "iptv");
 
     const refParam = ch.referrer ? `&referrer=${encodeURIComponent(ch.referrer)}` : "";
     const directURL = ch.url;
