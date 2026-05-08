@@ -20,6 +20,7 @@ const UI = {
   _iptvLoading: false,
   _freetvLoading: false,
   _iptvRenderLimit: 200, // Render max 200 iptv channels at a time
+  _useStreamProxy: false,
 
   /** Sport emoji map */
   _sportIcons: {
@@ -76,6 +77,10 @@ const UI = {
       this._favorites = new Set(saved);
     } catch (e) {}
 
+    // Stream proxy toggle (iptv/freetv only)
+    this._useStreamProxy = localStorage.getItem("cdnlive_use_stream_proxy") === "1";
+    this._syncProxyToggleUI();
+
     // Search
     this._els.searchInput?.addEventListener("input", (e) => {
       this._searchQuery = e.target.value.toLowerCase();
@@ -111,6 +116,24 @@ const UI = {
 
     this._updateStats(sports, totalEvents, channels);
     this._updateCountryFilter();
+
+    // In case the button exists only on some pages
+    this._syncProxyToggleUI();
+  },
+
+  toggleStreamProxy() {
+    this._useStreamProxy = !this._useStreamProxy;
+    localStorage.setItem("cdnlive_use_stream_proxy", this._useStreamProxy ? "1" : "0");
+    this._syncProxyToggleUI();
+    this._renderChannels();
+  },
+
+  _syncProxyToggleUI() {
+    const btn = document.getElementById("proxy-toggle-btn");
+    if (!btn) return;
+    btn.classList.toggle("active", !!this._useStreamProxy);
+    btn.setAttribute("aria-pressed", this._useStreamProxy ? "true" : "false");
+    btn.title = this._useStreamProxy ? "Proxy ON (streams via Worker)" : "Proxy OFF (direct streams)";
   },
 
   // ─── Set iptv-org Data ───
@@ -558,7 +581,7 @@ const UI = {
       if (code) countryCounts.set(code, (countryCounts.get(code) || 0) + 1);
     });
 
-    let html = `<button class="cat-tab active" data-cat="all" onclick="UI.filterChannelCategory('all')">All <span class="cat-count">${channels.length}</span></button>`;
+    let html = `<button class="cat-tab" data-cat="all" onclick="UI.filterChannelCategory('all')">All <span class="cat-count">${channels.length}</span></button>`;
 
     // Content categories
     html += `<span class="cat-divider"></span>`;
@@ -580,6 +603,7 @@ const UI = {
     }
 
     this._els.channelCatNav.innerHTML = html;
+    this._syncChannelCategoryActiveUI();
   },
 
   _renderIptvCategories(channels) {
@@ -600,7 +624,7 @@ const UI = {
       if (ch.country) countryCounts.set(ch.country, (countryCounts.get(ch.country) || 0) + 1);
     });
 
-    let html = `<button class="cat-tab active" data-cat="all" onclick="UI.filterChannelCategory('all')">All <span class="cat-count">${channelsWithUrl.length}</span></button>`;
+    let html = `<button class="cat-tab" data-cat="all" onclick="UI.filterChannelCategory('all')">All <span class="cat-count">${channelsWithUrl.length}</span></button>`;
 
     // iptv-org categories
     const sortedCats = [...catCounts.entries()].filter(([k]) => k !== "all").sort((a, b) => b[1] - a[1]).slice(0, 15);
@@ -622,14 +646,42 @@ const UI = {
     }
 
     this._els.channelCatNav.innerHTML = html;
+    this._syncChannelCategoryActiveUI();
   },
 
   filterChannelCategory(cat) {
+    if (cat && cat.startsWith("country:")) {
+      const code = cat.split(":")[1] || "";
+      if (!code) return;
+      this._countryFilter = (this._countryFilter || "all").toUpperCase() === code.toUpperCase() ? "all" : code.toUpperCase();
+      if (this._channelCategory && this._channelCategory.startsWith("country:")) {
+        this._channelCategory = "all";
+      }
+      this._updateCountryFilter();
+      this._syncChannelCategoryActiveUI();
+      this._renderChannels();
+      return;
+    }
+
     this._channelCategory = cat;
-    document.querySelectorAll(".cat-tab").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.cat === cat);
-    });
+    this._syncChannelCategoryActiveUI();
     this._renderChannels();
+  },
+
+  _syncChannelCategoryActiveUI() {
+    const activeCountry = (this._countryFilter || "all").toUpperCase();
+    const activeCat = this._channelCategory || "all";
+
+    document.querySelectorAll(".cat-tab").forEach((btn) => {
+      const v = btn.dataset.cat;
+      if (!v) return;
+      if (v.startsWith("country:")) {
+        const code = (v.split(":")[1] || "").toUpperCase();
+        btn.classList.toggle("active", activeCountry !== "all" && code === activeCountry);
+      } else {
+        btn.classList.toggle("active", v === activeCat);
+      }
+    });
   },
 
   // ─── Category Navigation ───
@@ -817,8 +869,11 @@ const UI = {
     const sourceTag = ch._source === "freetv" ? "freetv" : "iptv";
 
     const refParam = ch.referrer ? `&referrer=${encodeURIComponent(ch.referrer)}` : "";
-    const proxied = (typeof API !== "undefined" && API.proxiedStreamURL) ? API.proxiedStreamURL(ch.url) : ch.url;
-    const playerURL = `player.html?name=${encodeURIComponent(ch.name)}&url=${encodeURIComponent(proxied)}&source=${sourceTag}&code=${encodeURIComponent(ch.country || "")}${ch.quality ? "&quality=" + encodeURIComponent(ch.quality) : ""}${refParam}`;
+    const directURL = ch.url;
+    const finalURL = this._useStreamProxy && (typeof API !== "undefined" && API.proxiedStreamURL)
+      ? API.proxiedStreamURL(directURL)
+      : directURL;
+    const playerURL = `player.html?name=${encodeURIComponent(ch.name)}&url=${encodeURIComponent(finalURL)}&source=${sourceTag}&code=${encodeURIComponent(ch.country || "")}${ch.quality ? "&quality=" + encodeURIComponent(ch.quality) : ""}${refParam}`;
 
     return `
       <a class="channel-card" href="${playerURL}" style="animation-delay:${delay}ms">
