@@ -42,14 +42,21 @@
   <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
   <script>
     const PLAYER_BASE = "https://cdnlivetv.tv/api/v1/channels/player/";
+    const PROXY_BASE = "https://cdnlive.noyis90745.workers.dev/";
 
     const params = new URLSearchParams(window.location.search);
     const channelName = params.get("name") || "";
     const channelCode = params.get("code") || "";
-    const streamURL = params.get("url") || "";
+    let streamURL = params.get("url") || "";
     const streamSource = params.get("source") || "cdn";
     const streamQuality = params.get("quality") || "";
     const streamReferrer = params.get("referrer") || "";
+
+    // Auto-proxy HTTP URLs when page is on HTTPS (mixed content fix)
+    // Browsers block http:// resources on https:// pages
+    if (streamURL && location.protocol === "https:" && streamURL.startsWith("http://") && !streamURL.startsWith(PROXY_BASE)) {
+      streamURL = `${PROXY_BASE}?url=${encodeURIComponent(streamURL)}`;
+    }
 
     const iframe = document.getElementById("stream-iframe");
     const videoWrap = document.getElementById("video-wrap");
@@ -72,7 +79,48 @@
       streamURL.includes("/channels/player/")
     );
 
-    if (streamURL && !isCdnEmbed) {
+    // Detect YouTube / web-embed URLs that need iframe, not <video>
+    const ytMatch = streamURL && streamURL.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    const twitchMatch = streamURL && streamURL.match(/twitch\.tv\/(\w+)/);
+    const dailymotionMatch = streamURL && streamURL.match(/dailymotion\.com\/video\/([a-zA-Z0-9]+)/);
+    const isWebEmbed = !!(ytMatch || twitchMatch || dailymotionMatch);
+
+    if (streamURL && !isCdnEmbed && isWebEmbed) {
+      // ─── YouTube / Twitch / Dailymotion iframe embed ───
+      const chNameEl = document.getElementById("ch-name");
+      const chCodeEl = document.getElementById("ch-code");
+      if (chNameEl) chNameEl.textContent = channelName || "Live Stream";
+      if (chCodeEl) chCodeEl.textContent = channelCode ? channelCode.toUpperCase() : "";
+      document.title = `${channelName || "Live Stream"} — CDN Live TV`;
+
+      if (sourceBadge) {
+        sourceBadge.textContent = streamSource === "freetv" ? "FREE-TV" : (streamSource === "iptv" ? "IPTV" : "WEB");
+        const badgeClass = streamSource === "freetv" ? "freetv" : (streamSource === "iptv" ? "iptv" : "cdn");
+        sourceBadge.className = `source-badge ${badgeClass}`;
+        sourceBadge.style.display = "";
+        if (streamQuality) sourceBadge.textContent += ` · ${streamQuality}`;
+      }
+
+      let embedURL = "";
+      if (ytMatch) {
+        embedURL = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=0`;
+      } else if (twitchMatch) {
+        embedURL = `https://player.twitch.tv/?channel=${twitchMatch[1]}&parent=${location.hostname}`;
+      } else if (dailymotionMatch) {
+        embedURL = `https://www.dailymotion.com/embed/video/${dailymotionMatch[1]}?autoplay=1`;
+      }
+
+      if (embedURL) {
+        iframe.style.display = "block";
+        iframe.src = embedURL;
+        iframe.allow = "encrypted-media; autoplay; fullscreen";
+        iframe.addEventListener("load", hideLoader);
+        setTimeout(hideLoader, 8000);
+      } else {
+        showError();
+      }
+
+    } else if (streamURL && !isCdnEmbed) {
       // ─── Direct M3U8/HLS stream (iptv-org or other) ───
       const chNameEl = document.getElementById("ch-name");
       const chCodeEl = document.getElementById("ch-code");
