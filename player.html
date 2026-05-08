@@ -14,6 +14,11 @@
 </head>
 <body>
   <div class="player-page">
+    <div style="display:none">
+      <span id="ch-name"></span>
+      <span id="ch-code"></span>
+      <span id="source-badge"></span>
+    </div>
     <!-- Player Frame -->
     <div class="player-frame">
       <div class="loader" id="loader">
@@ -69,15 +74,19 @@
 
     if (streamURL && !isCdnEmbed) {
       // ─── Direct M3U8/HLS stream (iptv-org or other) ───
-      document.getElementById("ch-name").textContent = channelName || "Live Stream";
-      document.getElementById("ch-code").textContent = channelCode ? channelCode.toUpperCase() : "";
+      const chNameEl = document.getElementById("ch-name");
+      const chCodeEl = document.getElementById("ch-code");
+      if (chNameEl) chNameEl.textContent = channelName || "Live Stream";
+      if (chCodeEl) chCodeEl.textContent = channelCode ? channelCode.toUpperCase() : "";
       document.title = `${channelName || "Live Stream"} — CDN Live TV`;
 
-      sourceBadge.textContent = streamSource === "freetv" ? "FREE-TV" : (streamSource === "iptv" ? "IPTV" : "HLS");
-      const badgeClass = streamSource === "freetv" ? "freetv" : (streamSource === "iptv" ? "iptv" : "cdn");
-      sourceBadge.className = `source-badge ${badgeClass}`;
-      sourceBadge.style.display = "";
-      if (streamQuality) sourceBadge.textContent += ` · ${streamQuality}`;
+      if (sourceBadge) {
+        sourceBadge.textContent = streamSource === "freetv" ? "FREE-TV" : (streamSource === "iptv" ? "IPTV" : "HLS");
+        const badgeClass = streamSource === "freetv" ? "freetv" : (streamSource === "iptv" ? "iptv" : "cdn");
+        sourceBadge.className = `source-badge ${badgeClass}`;
+        sourceBadge.style.display = "";
+        if (streamQuality) sourceBadge.textContent += ` · ${streamQuality}`;
+      }
 
       videoWrap.style.display = "block";
 
@@ -198,13 +207,17 @@
 
     } else if (isCdnEmbed || (channelName && channelCode)) {
       // ─── CDN Live TV iframe embed ───
-      document.getElementById("ch-name").textContent = channelName;
-      document.getElementById("ch-code").textContent = channelCode.toUpperCase();
+      const chNameEl = document.getElementById("ch-name");
+      const chCodeEl = document.getElementById("ch-code");
+      if (chNameEl) chNameEl.textContent = channelName;
+      if (chCodeEl) chCodeEl.textContent = channelCode.toUpperCase();
       document.title = `${channelName} — CDN Live TV`;
 
-      sourceBadge.textContent = "CDN";
-      sourceBadge.className = "source-badge cdn";
-      sourceBadge.style.display = "";
+      if (sourceBadge) {
+        sourceBadge.textContent = "CDN";
+        sourceBadge.className = "source-badge cdn";
+        sourceBadge.style.display = "";
+      }
 
       const encodedName = encodeURIComponent(channelName.toLowerCase().replace(/\s+/g, "+"));
       const playerURL = streamURL || `${PLAYER_BASE}?name=${encodedName}&code=${channelCode}&user=cdnlivetv&plan=free`;
@@ -217,7 +230,8 @@
 
     } else {
       showError();
-      document.getElementById("ch-name").textContent = "No channel specified";
+      const chNameEl = document.getElementById("ch-name");
+      if (chNameEl) chNameEl.textContent = "No channel specified";
     }
 
     // ── Controls ──
