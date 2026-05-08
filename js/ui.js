@@ -102,6 +102,8 @@ const UI = {
       this._renderChannels();
     } else if (this._page === "live") {
       this._renderEvents();
+    } else if (this._page === "upcoming") {
+      this._renderEvents();
     } else if (this._page === "channels") {
       this._renderChannelCategories();
       this._renderChannels();
@@ -323,6 +325,16 @@ const UI = {
       for (const [sport, evs] of Object.entries(this._allSports)) {
         evs.filter((ev) => ev.status === "live").forEach((ev) => events.push({ ...ev, _sport: sport }));
       }
+    } else if (this._page === "upcoming") {
+      // Upcoming page: only upcoming events across all sports
+      for (const [sport, evs] of Object.entries(this._allSports)) {
+        evs.filter((ev) => ev.status === "upcoming").forEach((ev) => events.push({ ...ev, _sport: sport }));
+      }
+    } else if (this._page === "home") {
+      // Home page: only live events (upcoming/finished go on dedicated pages)
+      for (const [sport, evs] of Object.entries(this._allSports)) {
+        evs.filter((ev) => ev.status === "live").forEach((ev) => events.push({ ...ev, _sport: sport }));
+      }
     } else if (this._activeSport === "all") {
       // Flatten all sports, add sport name to each
       for (const [sport, evs] of Object.entries(this._allSports)) {
@@ -334,6 +346,9 @@ const UI = {
         _sport: this._activeSport,
       }));
     }
+
+    // Filter out events with no stream providers
+    events = events.filter((ev) => ev.channels && ev.channels.length > 0);
 
     // Sort: live first, then upcoming, then finished
     events.sort((a, b) => {
@@ -355,9 +370,41 @@ const UI = {
       return;
     }
 
-    this._els.eventsContainer.innerHTML = events
-      .map((ev, i) => this._eventCardHTML(ev, i))
-      .join("");
+    // On home/cricket pages, show only first 8 events + "View All" link
+    const isLimitedPage = this._page === "home" || this._page === "cricket";
+    const maxShow = 8;
+    const totalEvents = events.length;
+    const shown = isLimitedPage ? events.slice(0, maxShow) : events;
+    const hasMore = isLimitedPage && totalEvents > maxShow;
+
+    let html = shown.map((ev, i) => this._eventCardHTML(ev, i)).join("");
+
+    if (hasMore) {
+      const viewAllHref = this._page === "cricket" ? "cricket.html" : "live.html";
+      const viewAllLabel = this._page === "cricket" ? "View All Cricket" : "View All Live";
+      html += `
+        <a class="view-all-btn" href="${viewAllHref}">
+          ${viewAllLabel} <span style="opacity:0.6">${totalEvents} events</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>`;
+    }
+
+    // On home page, also add "View Upcoming" link
+    if (this._page === "home") {
+      let upcomingCount = 0;
+      for (const evs of Object.values(this._allSports)) {
+        upcomingCount += evs.filter((ev) => ev.status === "upcoming" && ev.channels && ev.channels.length > 0).length;
+      }
+      if (upcomingCount > 0) {
+        html += `
+          <a class="view-all-btn" href="upcoming.html" style="border-color:var(--green-dim);color:var(--green)">
+            View Upcoming <span style="opacity:0.6">${upcomingCount} events</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>`;
+      }
+    }
+
+    this._els.eventsContainer.innerHTML = html;
   },
 
   _eventCardHTML(ev, index) {
@@ -379,7 +426,7 @@ const UI = {
     const time = ev.time || "";
     const start = ev.start || "";
 
-    const channelButtons = (ev.channels || []).slice(0, 3).map((ch) => {
+    const channelButtons = (ev.channels || []).slice(0, 1).map((ch) => {
       const chName = ch.channel_name || ch.name || "Unknown";
       const chCode = ch.channel_code || ch.code || "";
       return `
@@ -393,8 +440,9 @@ const UI = {
       </a>`;
     }).join("");
 
-    const moreBtn = (ev.channels || []).length > 3
-      ? `<button class="more-channels-btn" onclick="UI._expandEventChannels('${ev.gameID}', '${ev._sport}')">+${ev.channels.length - 3} more channels</button>`
+    const moreCount = (ev.channels || []).length - 1;
+    const moreBtn = moreCount > 0
+      ? `<button class="more-channels-btn" onclick="UI._expandEventChannels('${ev.gameID}', '${ev._sport}')">+${moreCount} more channel${moreCount > 1 ? 's' : ''}</button>`
       : "";
 
     return `
@@ -693,16 +741,39 @@ const UI = {
       return;
     }
 
-    // Limit iptv/freetv rendering to prevent DOM freeze
-    const hasMore = isStreamSource && list.length > this._iptvRenderLimit;
-    const renderList = isStreamSource ? list.slice(0, this._iptvRenderLimit) : list;
+    // On home page, show only 10 channels + "View All" link
+    const isHomeLimited = this._page === "home";
+    const maxChannels = 10;
+    const totalChannels = list.length;
 
-    this._els.channelsContainer.innerHTML = renderList
+    // Limit iptv/freetv rendering to prevent DOM freeze
+    const hasMoreIptv = isStreamSource && list.length > this._iptvRenderLimit;
+    let renderList;
+    if (isHomeLimited) {
+      renderList = list.slice(0, maxChannels);
+    } else if (isStreamSource) {
+      renderList = list.slice(0, this._iptvRenderLimit);
+    } else {
+      renderList = list;
+    }
+
+    let html = renderList
       .map((ch, i) => isStreamSource ? this._iptvChannelCardHTML(ch, i) : this._channelCardHTML(ch, i))
       .join("");
 
+    // "View All" link for home page
+    if (isHomeLimited && totalChannels > maxChannels) {
+      html += `
+        <a class="view-all-btn" href="channels.html">
+          View All Channels <span style="opacity:0.6">${totalChannels} channels</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>`;
+    }
+
+    this._els.channelsContainer.innerHTML = html;
+
     // Load More button for iptv/freetv
-    if (hasMore) {
+    if (hasMoreIptv) {
       const loadMoreBtn = document.createElement("button");
       loadMoreBtn.className = "btn load-more-btn";
       loadMoreBtn.textContent = `Load ${Math.min(200, list.length - this._iptvRenderLimit)} more channels (${list.length - this._iptvRenderLimit} remaining)`;
@@ -746,7 +817,8 @@ const UI = {
     const sourceTag = ch._source === "freetv" ? "freetv" : "iptv";
 
     const refParam = ch.referrer ? `&referrer=${encodeURIComponent(ch.referrer)}` : "";
-    const playerURL = `player.html?name=${encodeURIComponent(ch.name)}&url=${encodeURIComponent(ch.url)}&source=${sourceTag}&code=${encodeURIComponent(ch.country || "")}${ch.quality ? "&quality=" + encodeURIComponent(ch.quality) : ""}${refParam}`;
+    const proxied = (typeof API !== "undefined" && API.proxiedStreamURL) ? API.proxiedStreamURL(ch.url) : ch.url;
+    const playerURL = `player.html?name=${encodeURIComponent(ch.name)}&url=${encodeURIComponent(proxied)}&source=${sourceTag}&code=${encodeURIComponent(ch.country || "")}${ch.quality ? "&quality=" + encodeURIComponent(ch.quality) : ""}${refParam}`;
 
     return `
       <a class="channel-card" href="${playerURL}" style="animation-delay:${delay}ms">

@@ -43,55 +43,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg-0); font-famil
 
 .player-page { display: flex; flex-direction: column; height: 100vh; }
 
-/* ── Top Bar ── */
-.player-bar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 20px; height: 48px; min-height: 48px;
-  background: rgba(9,9,11,0.92);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid var(--border-0);
-  flex-shrink: 0; z-index: 10;
-  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease);
-}
-.player-bar.hidden { opacity: 0; transform: translateY(-100%); pointer-events: none; }
-
-.bar-left { display: flex; align-items: center; gap: 10px; overflow: hidden; }
-.bar-left a {
-  display: flex; align-items: center; gap: 6px;
-  color: var(--text-3); text-decoration: none; font-size: 0.78rem; font-weight: 500;
-  padding: 5px 10px; border-radius: 8px;
-  border: 1px solid var(--border-0);
-  transition: all 0.2s var(--ease); white-space: nowrap; flex-shrink: 0;
-}
-.bar-left a:hover { background: var(--bg-4); color: var(--text-0); border-color: var(--border-1); }
-.bar-left a svg { width: 14px; height: 14px; }
-.bar-left .ch-name { color: var(--text-0); font-weight: 700; font-size: 0.88rem; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bar-left .ch-code {
-  color: var(--text-4); font-size: 0.65rem; font-weight: 600;
-  padding: 2px 6px; border-radius: 4px;
-  background: var(--bg-3); border: 1px solid var(--border-0);
-  text-transform: uppercase; letter-spacing: 0.04em; flex-shrink: 0;
-}
-.bar-left .live-dot {
-  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
-  background: var(--red); animation: pulse 2s infinite;
-  box-shadow: 0 0 8px var(--red-glow);
-}
-
-.bar-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-.bar-btn {
-  background: var(--bg-3); border: 1px solid var(--border-0); border-radius: 8px;
-  color: var(--text-2); padding: 5px 10px; font-size: 0.72rem; font-family: var(--font);
-  cursor: pointer; display: flex; align-items: center; gap: 5px;
-  font-weight: 500; transition: all 0.2s var(--ease); white-space: nowrap;
-}
-.bar-btn:hover { background: var(--bg-4); color: var(--text-0); border-color: var(--border-1); }
-.bar-btn svg { width: 13px; height: 13px; }
-.bar-btn .kbd {
-  padding: 1px 4px; font-size: 0.55rem; background: var(--bg-4);
-  border: 1px solid var(--border-1); border-radius: 3px;
-  color: var(--text-4); font-weight: 600; font-family: var(--font);
-}
+/* ── Top Bar (Removed) ── */
 
 /* ── Source Badge ── */
 .source-badge {
@@ -159,11 +111,58 @@ html, body { height: 100%; overflow: hidden; background: var(--bg-0); font-famil
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
 
 /* ── Responsive ── */
+@media (max-width: 768px) {
+  .player-page {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 @media (max-width: 640px) {
-  .player-bar { padding: 0 12px; height: 42px; min-height: 42px; }
-  .bar-left { gap: 6px; }
-  .bar-left a { padding: 4px 8px; font-size: 0.72rem; }
-  .bar-left .ch-name { font-size: 0.78rem; }
-  .bar-btn { padding: 4px 8px; font-size: 0.68rem; }
-  .bar-btn .kbd { display: none; }
+  .player-page {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Plyr controls adjustments for mobile */
+  .plyr--full-ui .plyr__controls {
+    padding: 8px;
+  }
+  
+  .plyr--full-ui .plyr__control--overlaid {
+    padding: 6px;
+  }
+  
+  .plyr--full-ui .plyr__control svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .plyr--full-ui .plyr__control[data-plyr="play"] {
+    width: 44px;
+    height: 44px;
+  }
+  
+  .plyr--full-ui .plyr__control[data-plyr="mute"] {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .plyr--full-ui .plyr__control[data-plyr="fullscreen"] {
+    width: 40px;
+    height: 40px;
+  }
+  
+  /* Loading and error adjustments */
+  .loader-text {
+    font-size: 0.9rem;
+  }
+  
+  .error-state h2 {
+    font-size: 1.1rem;
+  }
+  
+  .error-state p {
+    font-size: 0.85rem;
+  }
 }

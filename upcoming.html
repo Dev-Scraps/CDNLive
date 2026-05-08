@@ -3,22 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Live Now — CDN Live TV</title>
-  <meta name="description" content="All live sports events streaming right now. Free, no auth required.">
+  <title>Upcoming — CDN Live TV</title>
+  <meta name="description" content="All upcoming sports events. Free, no auth required.">
   <meta name="theme-color" content="#09090b">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>�</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'></text></svg>">
   <link rel="stylesheet" href="css/styles.css">
 </head>
-<body data-page="live" class="has-mobile-nav">
+<body data-page="upcoming" class="has-mobile-nav">
 
   <!-- Header -->
   <header class="header">
     <div class="container header-inner">
       <a href="index.html" class="logo" aria-label="CDN Live TV Home">
-        
         <span class="logo-text">CDN Live TV</span>
         <span class="logo-sub">Free Sports Streams</span>
       </a>
@@ -31,11 +30,11 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8l-4 4h3v4h2v-4h3z"/></svg>
           Cricket
         </a>
-        <a href="live.html" class="active">
+        <a href="live.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49m11.31-2.82a10 10 0 010 14.14m-14.14 0a10 10 0 010-14.14"/></svg>
           Live
         </a>
-        <a href="upcoming.html">
+        <a href="upcoming.html" class="active">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           Upcoming
         </a>
@@ -45,6 +44,10 @@
         </a>
       </nav>
       <div class="header-actions">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="search-input" placeholder="Search events…" aria-label="Search events" style="display:none">
+        </div>
         <div class="status-pill" aria-live="polite">
           <span class="status-dot" id="status-dot"></span>
           <span id="status-text">Loading…</span>
@@ -56,26 +59,25 @@
     <div class="container mobile-search-row">
       <div class="search-box">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="mobile-search-input-header" placeholder="Search live events…" aria-label="Search channels" oninput="document.getElementById('search-input')?.value=this.value;document.getElementById('search-input')?.dispatchEvent(new Event('input'))">
+        <input type="text" id="mobile-search-input-header" placeholder="Search upcoming events…" aria-label="Search channels" oninput="document.getElementById('search-input')?.value=this.value;document.getElementById('search-input')?.dispatchEvent(new Event('input'))">
       </div>
     </div>
   </header>
 
   <main class="container" style="padding-top:24px;padding-bottom:24px;">
 
-
     <!-- Stats -->
-    <div class="stats-row" role="status" aria-label="Live statistics">
+    <div class="stats-row" role="status" aria-label="Upcoming statistics">
       <div class="stat-card">
-        <div class="stat-value live" id="stat-live">0</div>
-        <div class="stat-label">Live Events</div>
+        <div class="stat-value accent" id="stat-live">0</div>
+        <div class="stat-label">Upcoming</div>
       </div>
       <div class="stat-card">
         <div class="stat-value" id="stat-sports">0</div>
         <div class="stat-label">Sports</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value accent" id="stat-channels">0</div>
+        <div class="stat-value" id="stat-channels">0</div>
         <div class="stat-label">Channels</div>
       </div>
       <div class="stat-card">
@@ -84,17 +86,17 @@
       </div>
     </div>
 
-    <!-- Live Events -->
-    <section class="section" aria-label="Live events">
+    <!-- Upcoming Events -->
+    <section class="section" aria-label="Upcoming events">
       <div class="section-header">
         <div class="section-title">
-          <span style="color:var(--red);font-size:8px">●</span>
-          Live Events
+          <span style="color:var(--green);font-size:8px">●</span>
+          Upcoming Events
           <span class="count" id="events-count">0</span>
         </div>
       </div>
       <div class="events-grid" id="events-container">
-        <div class="skeleton"><span class="skeleton-text">Fetching live events…</span></div>
+        <div class="skeleton"><span class="skeleton-text">Fetching upcoming events…</span></div>
       </div>
     </section>
 
@@ -117,11 +119,11 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
       Cricket
     </a>
-    <a href="live.html" class="active">
+    <a href="live.html">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49"/></svg>
       Live
     </a>
-    <a href="upcoming.html">
+    <a href="upcoming.html" class="active">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Upcoming
     </a>
@@ -130,6 +132,10 @@
       Channels
     </a>
   </nav>
+
+  <button class="back-to-top" id="back-to-top" onclick="Utils.scrollToTop()" title="Back to top">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+  </button>
 
   <div class="toast-container" id="toast-container"></div>
 

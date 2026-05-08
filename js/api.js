@@ -2,7 +2,6 @@
  * api.js — All API logic for CDN Live TV
  * Sources: CDN Live TV, iptv-org, Free-TV
  * Cache-first with localStorage + TTL
- * NO PROXY — direct API calls
  */
 
 const API = {
@@ -10,6 +9,8 @@ const API = {
   CDN_BASE: "https://api.cdnlivetv.tv/api/v1",
   CDN_PARAMS: "?user=cdnlivetv&plan=free",
   CDN_PLAYER_BASE: "https://cdnlivetv.tv/api/v1/channels/player/",
+
+  STREAM_PROXY_BASE: "https://cdnlive.noyis90745.workers.dev/",
 
   IPTV_BASE: "https://iptv-org.github.io/api",
   FREETV_URL: "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8",
@@ -25,6 +26,13 @@ const API = {
   playerURL(name, code) {
     const n = encodeURIComponent(name.toLowerCase().replace(/\s+/g, "+"));
     return `${this.CDN_PLAYER_BASE}?name=${n}&code=${code}&user=cdnlivetv&plan=free`;
+  },
+
+  proxiedStreamURL(url) {
+    if (!url) return "";
+    const base = this.STREAM_PROXY_BASE;
+    if (url.startsWith(base)) return url;
+    return `${base}?url=${encodeURIComponent(url)}`;
   },
 
   // ─── CDN Fetch ───

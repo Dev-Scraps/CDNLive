@@ -14,30 +14,6 @@
 </head>
 <body>
   <div class="player-page">
-    <!-- Top Bar -->
-    <div class="player-bar" id="player-bar">
-      <div class="bar-left">
-        <a href="index.html" title="Back to channels">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          Back
-        </a>
-        <span class="live-dot"></span>
-        <span class="ch-name" id="ch-name">Loading…</span>
-        <span class="ch-code" id="ch-code"></span>
-        <span class="source-badge cdn" id="source-badge" style="display:none"></span>
-      </div>
-      <div class="bar-right">
-        <button class="bar-btn" onclick="toggleBar()" title="Hide bar (H)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
-          Hide <span class="kbd">H</span>
-        </button>
-        <button class="bar-btn" onclick="goFullscreen()" title="Fullscreen (F)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
-          Fullscreen <span class="kbd">F</span>
-        </button>
-      </div>
-    </div>
-
     <!-- Player Frame -->
     <div class="player-frame">
       <div class="loader" id="loader">
@@ -245,12 +221,6 @@
     }
 
     // ── Controls ──
-    let barHidden = false;
-    function toggleBar() {
-      barHidden = !barHidden;
-      document.getElementById("player-bar").classList.toggle("hidden", barHidden);
-    }
-
     function goFullscreen() {
       const el = document.documentElement;
       if (el.requestFullscreen) el.requestFullscreen();
@@ -259,7 +229,6 @@
 
     document.addEventListener("keydown", (e) => {
       if (e.key === "f" || e.key === "F") goFullscreen();
-      if (e.key === "h" || e.key === "H") toggleBar();
       if (e.key === "Escape" && document.fullscreenElement) document.exitFullscreen();
       if (e.key === "Backspace" || (e.altKey && e.key === "ArrowLeft")) {
         window.location.href = "index.html";
@@ -272,13 +241,6 @@
       // M to mute
       if (e.key === "m" && player) {
         player.muted = !player.muted;
-      }
-    });
-
-    document.addEventListener("mousemove", (e) => {
-      if (barHidden && e.clientY < 50) {
-        barHidden = false;
-        document.getElementById("player-bar").classList.remove("hidden");
       }
     });
 
